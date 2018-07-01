@@ -1,13 +1,14 @@
 import { INode } from './type';
-import { vNodeTextType } from './vdom';
 
 export function createDomElement(node: INode): HTMLElement | Text {
   let el: HTMLElement | Text;
 
-  if (node.type === vNodeTextType) {
+  if (!node.isDom) throw new Error();
+
+  if (node.isText) {
     el = document.createTextNode(node.text);
   } else {
-    el = document.createElement(node.type);
+    el = document.createElement(node.type as string);
 
     Object.entries(node.attrs).forEach(([key, value]) =>
       setAttribute(el as HTMLElement, key, value)

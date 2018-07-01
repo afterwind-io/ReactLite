@@ -1,4 +1,4 @@
-import { CreateContext } from './lib/type';
+import { CreateElement } from './lib/type';
 import { ReactLite } from './lib/reactlite';
 import {
   button,
@@ -12,15 +12,15 @@ import {
   tr,
 } from './lib/dom.util';
 
-interface TodoData {
-  time: string
-  content: string
-  onRemoved: () => void
+interface ITodoData {
+  time: string;
+  content: string;
+  onRemoved?: () => void;
 }
 
-class App extends ReactLite<any, any> {
+class App extends ReactLite<any, ITodoData> {
   constructor(prop: any = {}) {
-    super(prop)
+    super(prop);
 
     this.state = {
       todo: '',
@@ -30,13 +30,13 @@ class App extends ReactLite<any, any> {
         { time: '15:00', content: 'Study' },
         { time: '20:00', content: 'Sleep' },
       ]
-    }
+    };
   }
 
   private onInputChanged(e: KeyboardEvent) {
     this.setState({
       todo: (e.target as HTMLInputElement).value
-    })
+    });
   }
 
   private add() {
@@ -46,19 +46,19 @@ class App extends ReactLite<any, any> {
         time: 'wow',
         content: this.state.todo
       })
-    })
+    });
   }
 
   private remove(index: number) {
-    const todos = [...this.state.todos]
-    todos.splice(index, 1)
+    const todos = [...this.state.todos];
+    todos.splice(index, 1);
 
     this.setState({
       todos
-    })
+    });
   }
 
-  public render(h: CreateContext) {
+  public render(h: CreateElement) {
     return div(null,
       h1(null, 'TODOs'),
       input({
@@ -77,7 +77,7 @@ class App extends ReactLite<any, any> {
         },
         'add'
       ),
-      ...this.state.todos.map((todo: TodoData, index: number) =>
+      ...this.state.todos.map((todo: ITodoData, index: number) =>
         h(Todo,
           {
             ...todo,
@@ -85,37 +85,37 @@ class App extends ReactLite<any, any> {
           }
         )
       )
-    )
+    );
   }
 }
 
-class Todo extends ReactLite<any, TodoData> {
-  constructor(prop: TodoData) {
-    super(prop)
+class Todo extends ReactLite<any, ITodoData> {
+  constructor(prop: ITodoData) {
+    super(prop);
 
     this.state = {
       mark: false,
       like: 0,
-    }
+    };
   }
 
-  delete() {
-    this.prop.onRemoved()
+  public delete() {
+    this.prop.onRemoved && this.prop.onRemoved();
   }
 
-  switch() {
+  public switch() {
     this.setState({
       mark: !this.state.mark
-    })
+    });
   }
 
-  like() {
+  public like() {
     this.setState({
       like: this.state.like + 1
-    })
+    });
   }
 
-  public render(h: CreateContext) {
+  public render(h: CreateElement) {
     return div({ style: 'display: flex;' },
       p(null, this.state.like),
       p(null, `${this.state.mark ? '[TODO]' : '[----]'}`),
@@ -144,13 +144,10 @@ class Todo extends ReactLite<any, TodoData> {
         },
         'like'
       ),
-    )
+    );
   }
 }
 
-const global: any = window
-const c = new App()
-global.foo = c
-c.mount('#app')
-
-console.log(c.context);
+const global: any = window;
+global.foo = ReactLite.mount('#app', h => h(App, null));
+console.log(global.foo.context);

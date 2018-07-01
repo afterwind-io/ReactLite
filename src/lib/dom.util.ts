@@ -1,8 +1,8 @@
-import { INodeAttributes, IContext } from './type';
+import { INodeAttributes, INode } from './type';
 import { h } from './core';
 
 function dom(type: string) {
-  return (attrs: INodeAttributes | null, ...children: Array<IContext | any>): IContext => {
+  return (attrs: INodeAttributes | null, ...children: Array<INode | any>): INode => {
     return h(type, attrs, ...children);
   };
 }

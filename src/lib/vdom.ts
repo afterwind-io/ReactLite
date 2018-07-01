@@ -1,4 +1,5 @@
-import { INode, INodeAttributes } from './type';
+import { INode, INodeAttributes, ReactLiteConstructor } from './type';
+import { isNull, isUndefined } from './util';
 
 export const vNodeTextType = '__TEXT__';
 export const vNodeCommentType = '__COMMENT__';
@@ -11,19 +12,22 @@ const vNodeAttributesSet = [
 ];
 
 interface INodeOption {
-  type: string;
+  type: string | ReactLiteConstructor;
   attrs?: INodeAttributes | null;
+  children?: Array<INode | string | void>;
   text?: string;
 }
 
 export class vNode implements INode {
-  public type: string;
-  public attrs: INodeAttributes = {};
-  public text: string = '';
+  public type: string | ReactLiteConstructor;
+  public attrs: INodeAttributes;
+  public children: INode[];
+  public text: string;
 
   constructor(option: INodeOption) {
     this.type = option.type;
     this.attrs = option.attrs || {};
+    this.children = this.parseChildren(option.children || []);
     this.text = option.text || '';
   }
 
@@ -49,15 +53,23 @@ export class vNode implements INode {
     return this.type === '';
   }
 
-  // private parseChildren(nodes: any[]): vNode[] {
-  //   return nodes.map(node => {
-  //     if (node instanceof vNode) {
-  //       return node
-  //     } else if (isNull(node) || isUndefined(node)) {
-  //       return vNode.empty()
-  //     } else {
-  //       return vNode.text(node.toString())
-  //     }
-  //   })
-  // }
+  public get isDom(): boolean {
+    return typeof this.type === 'string';
+  }
+
+  public get isText(): boolean {
+    return this.type === vNodeTextType;
+  }
+
+  private parseChildren(nodes: any[]): vNode[] {
+    return nodes.map(node => {
+      if (node instanceof vNode) {
+        return node;
+      } else if (isNull(node) || isUndefined(node)) {
+        return vNode.empty();
+      } else {
+        return vNode.text(node.toString());
+      }
+    });
+  }
 }

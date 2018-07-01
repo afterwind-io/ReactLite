@@ -1,101 +1,169 @@
 import {
   INode,
-  CreateContext,
+  CreateElement,
   IContext,
-  IDoge,
+  IReactLite,
+  ReactLiteConstructor,
 } from './type';
-import { vNodeTextType, } from './vdom';
+import { vNode } from './vdom';
 import { Context, h } from './core';
 import { createDomElement, setAttribute } from './dom';
 import { deepcopy } from './util';
 
+function instantiate(node: INode): IContext {
+  if (node.isEmpty) return Context.empty();
+
+  if (node.isDom) {
+    const dom = createDomElement(node);
+    const children = node.children.map(instantiate);
+
+    children.forEach(child => dom.appendChild(child.dom as Node));
+
+    return Object.assign(Context.empty(), { node, dom, children });
+  } else {
+    const ctor = node.type as ReactLiteConstructor;
+    const instance = new ctor(node.attrs, node.children);
+
+    instance.subContext = Object.assign(
+      instantiate(instance.render(h)),
+      { instance }
+    );
+
+    return instance.context = Object.assign(Context.empty(), {
+      instance, node, dom: instance.subContext.dom
+    });
+  }
+}
+
 function reconcile(
   parent: HTMLElement | null,
   oldCtx: IContext,
-  newCtx: IContext,
+  newNode: INode,
 ): IContext {
   if (parent == null) throw new Error('');
 
-  if (oldCtx.isEmpty && !newCtx.isEmpty) {
-    newCtx.dom = createDomElement(newCtx.node as INode);
-    parent.appendChild(newCtx.dom);
-  } else if (!oldCtx.isEmpty && newCtx.isEmpty) {
+  if (oldCtx.isEmpty && !newNode.isEmpty) {
+    // 创建新节点
+    const instance = instantiate(newNode as INode);
+    parent.appendChild(instance.dom as Node);
+    return instance;
+  } else if (!oldCtx.isEmpty && newNode.isEmpty) {
+    // 删除老节点
     parent.removeChild(oldCtx.dom as Node);
     return Context.empty();
-  } else if (oldCtx.node.type !== newCtx.node.type) {
-    newCtx.dom = createDomElement(newCtx.node);
-    parent.replaceChild(newCtx.dom, oldCtx.dom as Node);
-  } else if (oldCtx.instance) {
-    /**
-     * TODO:
-     * 若新节点刚好为不同的组件，或为新的普通元素，但根元素类型一致，
-     * 下列处理流程会导致新节点无法正确渲染
-     */
-
-    // TODO: 组件树被重建了两次
-    const oldInstance = oldCtx.instance;
-    // @ts-ignore
-    oldInstance.prop = newCtx.instance.prop;
-    oldCtx.instance = null;
-    newCtx = reconcile(parent, oldCtx, oldInstance.render(h));
-    oldCtx.instance = oldInstance;
-    newCtx.instance = oldInstance;
-    return newCtx;
-  } else {
-    if (oldCtx.node.type === vNodeTextType) {
-      newCtx.dom = updateElementText(oldCtx, newCtx);
+  } else if (oldCtx.node.type !== newNode.type) {
+    // 当新老节点type不一致时，替换老节点
+    const instance = instantiate(newNode as INode);
+    parent.replaceChild(instance.dom as Node, oldCtx.dom as Node);
+    return instance;
+  } else if (newNode.isDom) {
+    // 当新老节点type一致时
+    if (newNode.isText) {
+      // 如果节点类型为文本，直接更新老节点的文本内容
+      oldCtx.dom = updateElementText(oldCtx, newNode);
+      return oldCtx;
     } else {
-      newCtx.dom = updateElementAttr(oldCtx, newCtx);
+      // 如果节点类型为普通dom，直接更新老节点元素的属性
+      oldCtx.dom = updateElementAttr(oldCtx, newNode);
+
+      // TODO: 可提取方法
+      // 比较子节点
+      const childCount = Math.max(
+        oldCtx.children.length,
+        newNode.children.length
+      );
+      const childContexts = [];
+      for (let i = 0; i < childCount; i++) {
+        const context = reconcile(
+          oldCtx.dom as HTMLElement,
+          oldCtx.children[i] || Context.empty(),
+          newNode.children[i] || vNode.empty(),
+        );
+        if (!context.isEmpty) childContexts.push(context);
+      }
+
+      return Object.assign(oldCtx, { children: childContexts });
     }
-  }
-
-  const childCount = Math.max(
-    oldCtx.children.length,
-    newCtx.children.length
-  );
-  for (let i = 0; i < childCount; i++) {
-    const context = reconcile(
-      newCtx.dom as HTMLElement,
-      oldCtx.children[i] || Context.empty(),
-      newCtx.children[i] || Context.empty(),
+  } else {
+    // 当新老节点均为相同类型的组件时
+    const instance = Object.assign(
+      oldCtx.instance,
+      {
+        prop: newNode.attrs,
+        childNodes: newNode.children,
+      }
     );
-    if (!context.isEmpty) newCtx.children[i] = context;
-  }
+    const node = instance.render(h);
+    instance.subContext = reconcile(parent, instance.subContext, node);
 
-  return newCtx as IContext;
+    return Object.assign(oldCtx, { dom: instance.subContext.dom });
+  }
 }
 
-function updateElementText(oldCtx: IContext, newCtx: IContext): HTMLElement | Text | null {
+function updateElementText(oldCtx: IContext, newNode: INode): HTMLElement | Text | null {
   const dom = oldCtx.dom as Text;
 
-  if (dom.textContent !== newCtx.node.text) {
-    dom.textContent = newCtx.node.text;
+  if (dom.textContent !== newNode.text) {
+    dom.textContent = newNode.text;
   }
 
   return oldCtx.dom;
 }
 
-function updateElementAttr(oldCtx: IContext, newCtx: IContext): HTMLElement | Text | null {
+function updateElementAttr(oldCtx: IContext, newNode: INode): HTMLElement | Text | null {
   // TODO
-  Object.entries(newCtx.node.attrs).forEach(([key, value]) =>
+  Object.entries(newNode.attrs).forEach(([key, value]) =>
     setAttribute(oldCtx.dom as HTMLElement, key, value)
   );
   return oldCtx.dom;
 }
 
-export class ReactLite<S = any, P = any> implements IDoge {
-  public state: S;
+export class ReactLite<S = any, P = any> implements IReactLite {
+  public state: S = {} as any;
   public prop: P;
-  private prevState: S;
+  public context: IContext = Context.empty();
+  public subContext: IContext = Context.empty();
+
+  protected childNodes: INode[];
+  private prevState: S = {} as any;
   // private batch: Array<() => void> = []
   private patchToken: number = -1;
   private commits: Array<Partial<S>> = [];
-  public context: IContext = new Context();
 
-  constructor(prop: any = {}, state: any = {}) {
-    this.state = state;
+  constructor(prop: any = {}, childNodes: INode[] = []) {
     this.prop = prop;
-    this.prevState = {} as any;
+    this.childNodes = childNodes;
+  }
+
+  public static mount(
+    anchor: HTMLElement | string,
+    node: INode | ((h: CreateElement) => INode)
+  ): ReactLite {
+
+    let parent: HTMLElement | null;
+    let self: HTMLElement | null;
+
+    if (anchor instanceof HTMLElement) {
+      parent = anchor.parentElement;
+      self = anchor;
+    } else {
+      self = document.querySelector(anchor);
+      if (self == null) {
+        throw new Error(`Element "${anchor}" not exist.`);
+      } else {
+        parent = self.parentElement;
+      }
+    }
+
+    if (parent == null) {
+      throw new Error('?');
+    }
+
+    const root = node instanceof Function ? node(h) : node;
+    const context = reconcile(self, Context.empty(), root);
+
+    parent.replaceChild(context.dom as Node, self);
+    return context.instance as ReactLite;
   }
 
   private get hasStateModified(): boolean {
@@ -120,35 +188,8 @@ export class ReactLite<S = any, P = any> implements IDoge {
     this.patch();
   }
 
-  public mount(anchor: HTMLElement | string) {
-    let parent: HTMLElement | null;
-    let self: HTMLElement | null;
-
-    if (anchor instanceof HTMLElement) {
-      parent = anchor.parentElement;
-      self = anchor;
-    } else {
-      self = document.querySelector(anchor);
-      if (self == null) {
-        throw new Error(`Element "${anchor}" not exist.`);
-      } else {
-        parent = self.parentElement;
-      }
-    }
-
-    if (parent == null) {
-      throw new Error('?');
-    } else {
-      // TODO: 组件树被递归了两次
-      this.context = reconcile(self, Context.empty(), this.render(h));
-      this.context.instance = this;
-
-      parent.replaceChild(this.context.dom as Node, self);
-    }
-  }
-
-  public render(h: CreateContext): IContext {
-    return new Context();
+  public render(h: CreateElement): INode {
+    return vNode.empty();
   }
 
   private commit(frag: Partial<S>) {
@@ -158,12 +199,12 @@ export class ReactLite<S = any, P = any> implements IDoge {
   private diff() {
     if (this.context.dom == null) return;
 
-    this.context = reconcile(
+    this.subContext = reconcile(
       this.context.dom.parentElement as HTMLElement,
-      this.context,
-      Object.assign({}, this.render(h), { instance: this })
+      this.subContext,
+      this.render(h),
     );
-    this.context.instance = this;
+    this.context.dom = this.subContext.dom;
   }
 
   private patch() {
@@ -173,11 +214,7 @@ export class ReactLite<S = any, P = any> implements IDoge {
       this.commits.forEach(commit => Object.assign(this.state, commit));
       this.commits = [];
 
-      // console.log('old', this.prevState);
-      // console.log('new', this.state);
-
       this.diff();
-      // console.log('rendered');
 
       this.patchToken = -1;
     });

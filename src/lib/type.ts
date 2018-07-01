@@ -1,9 +1,12 @@
 export interface INode {
-  type: string;
+  type: string | ReactLiteConstructor;
   attrs: INodeAttributes;
+  children: INode[];
   text: string;
 
   isEmpty: boolean;
+  isDom: boolean;
+  isText: boolean;
 }
 
 export interface INodeAttributes {
@@ -16,7 +19,7 @@ export interface INodeAttributes {
 }
 
 export interface IContext {
-  instance: IDoge | null;
+  instance: IReactLite | null;
   dom: HTMLElement | Text | null;
   node: INode;
   children: IContext[];
@@ -24,20 +27,20 @@ export interface IContext {
   isEmpty: boolean;
 }
 
-export type CreateContext = (
+export type CreateElement = (
   type: string | ReactLiteConstructor,
   attrs?: INodeAttributes | null,
   ...children: Array<IContext | any>
-) => IContext;
+) => INode;
 
-export interface IDoge<S = any, P = any> {
+export interface IReactLite<S = any, P = any> {
   state: S;
   prop: P;
   context: IContext;
+  subContext: IContext;
 
   setState(commit: object | ((prevState: S, prop: P) => Partial<S>)): void;
-  mount(anchor: HTMLElement | string): void;
-  render(h: CreateContext): IContext;
+  render(h: CreateElement): INode;
 }
 
-export type ReactLiteConstructor = new (props?: any, state?: any) => IDoge<any, any>;
+export type ReactLiteConstructor = new (props?: any, childNodes?: INode[]) => IReactLite<any, any>;
