@@ -1,3 +1,7 @@
+export interface IDictionary<V> {
+  [key: string]: V;
+}
+
 export interface INode {
   type: string | ReactLiteConstructor;
   attrs: INodeAttributes;
@@ -9,13 +13,12 @@ export interface INode {
   isText: boolean;
 }
 
-export interface INodeAttributes {
+export interface INodeAttributes extends IDictionary<any> {
   key?: any;
-  class?: { [key: string]: any } | string;
-  style?: { [key: string]: any } | string;
-  on?: { [key: string]: any };
-  domAttr?: { [key: string]: any };
-  [key: string]: any;
+  class?: IDictionary<boolean> | string[] | string;
+  style?: IDictionary<any> | string;
+  on?: IDictionary<any>;
+  domAttr?: IDictionary<any>;
 }
 
 export interface IContext {

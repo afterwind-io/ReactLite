@@ -1,4 +1,4 @@
-import { INode } from './type';
+import { IDictionary, INode } from './type';
 
 export function createDomElement(node: INode): HTMLElement | Text {
   let el: HTMLElement | Text;
@@ -10,11 +10,21 @@ export function createDomElement(node: INode): HTMLElement | Text {
   } else {
     el = document.createElement(node.type as string);
 
-    Object.entries(node.attrs).forEach(([key, value]) =>
-      setAttribute(el as HTMLElement, key, value)
-    );
+    updateDomAttributes(el, node.attrs);
   }
 
+  return el;
+}
+
+export function updateDomTextContent(el: Text, content: string): Text {
+  if (el.textContent !== content) el.textContent = content;
+  return el;
+}
+
+export function updateDomAttributes(el: HTMLElement, attrs: IDictionary<any>): HTMLElement {
+  Object.entries(attrs).forEach(([key, value]) =>
+    setAttribute(el as HTMLElement, key, value)
+  );
   return el;
 }
 
@@ -27,35 +37,45 @@ export function setAttribute(el: HTMLElement, key: string, value: any) {
     case 'on':
       return setEventListener(el, value);
     case 'domAttr':
-      return setDomAttribute(el, value);
+      return setDomAttributes(el, value);
     default:
       break;
   }
 }
 
-function setClass(el: HTMLElement, value: any) {
+function setClass(el: HTMLElement, value: IDictionary<boolean> | string[] | string) {
+  let cls: string;
+
   if (typeof value === 'string') {
-    el.setAttribute('class', value);
+    cls = value;
+  } else if (Array.isArray(value)) {
+    cls = value.reduce((str, v) => str + v + ' ', '');
   } else {
-    // TODO
+    cls = Object.keys(value).reduce<string>((str, key) =>
+      value[key] ? str.concat(key) : str, '');
   }
+
+  const originClass = el.getAttribute('class');
+  if (cls !== originClass) el.setAttribute('class', cls);
 }
 
-function setStyle(el: HTMLElement, value: any) {
-  if (typeof value === 'string') {
-    el.setAttribute('style', value);
-  } else {
-    // TODO
-  }
+function setStyle(el: HTMLElement, value: IDictionary<string> | string) {
+  const style = typeof value === 'string'
+    ? value
+    : Object.entries(value).reduce((str, [k, v]) => str + `${k}: ${v};`, '');
+
+  const originStyle = el.getAttribute('style');
+  if (style !== originStyle) el.setAttribute('style', style);
 }
 
-function setEventListener(el: HTMLElement, events: { [key: string]: () => void }) {
+function setEventListener(el: HTMLElement, events: IDictionary<EventListenerOrEventListenerObject>) {
+  // TODO: 可能造成事件监听函数重复绑定
   Object.entries(events).forEach(([name, handler]) => {
     el.addEventListener(name, handler);
   });
 }
 
-function setDomAttribute(el: HTMLElement, attrs: { [key: string]: any }) {
+function setDomAttributes(el: HTMLElement, attrs: IDictionary<any>) {
   Object.entries(attrs).forEach(([key, value]) => {
     // @ts-ignore
     // tslint:disable-next-line: triple-equals

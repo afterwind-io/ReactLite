@@ -7,7 +7,7 @@ import {
 } from './type';
 import { vNode } from './vdom';
 import { Context, h } from './core';
-import { createDomElement, setAttribute } from './dom';
+import { createDomElement, updateDomTextContent, updateDomAttributes } from './dom';
 import { deepcopy } from './util';
 
 function instantiate(node: INode): IContext {
@@ -60,11 +60,11 @@ function reconcile(
     // 当新老节点type一致时
     if (newNode.isText) {
       // 如果节点类型为文本，直接更新老节点的文本内容
-      oldCtx.dom = updateElementText(oldCtx, newNode);
+      oldCtx.dom = updateDomTextContent(oldCtx.dom as Text, newNode.text);
       return oldCtx;
     } else {
       // 如果节点类型为普通dom，直接更新老节点元素的属性
-      oldCtx.dom = updateElementAttr(oldCtx, newNode);
+      oldCtx.dom = updateDomAttributes(oldCtx.dom as HTMLElement, newNode.attrs);
 
       // TODO: 可提取方法
       // 比较子节点
@@ -100,24 +100,6 @@ function reconcile(
   }
 }
 
-function updateElementText(oldCtx: IContext, newNode: INode): HTMLElement | Text | null {
-  const dom = oldCtx.dom as Text;
-
-  if (dom.textContent !== newNode.text) {
-    dom.textContent = newNode.text;
-  }
-
-  return oldCtx.dom;
-}
-
-function updateElementAttr(oldCtx: IContext, newNode: INode): HTMLElement | Text | null {
-  // TODO
-  Object.entries(newNode.attrs).forEach(([key, value]) =>
-    setAttribute(oldCtx.dom as HTMLElement, key, value)
-  );
-  return oldCtx.dom;
-}
-
 export class ReactLite<S = any, P = any> implements IReactLite {
   public state: S = {} as any;
   public prop: P;
@@ -126,7 +108,6 @@ export class ReactLite<S = any, P = any> implements IReactLite {
 
   protected childNodes: INode[];
   private prevState: S = {} as any;
-  // private batch: Array<() => void> = []
   private patchToken: number = -1;
   private commits: Array<Partial<S>> = [];
 

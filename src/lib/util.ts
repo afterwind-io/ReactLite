@@ -15,6 +15,10 @@ export function isFunction(o: any): boolean {
   return !!o && ({}).toString.call(o) === '[object Function]';
 }
 
+export function isArray(o: any): boolean {
+  return Array.isArray(o);
+}
+
 export function toString(value: any): string {
   if (typeof value === 'string') return value;
   return String(value);

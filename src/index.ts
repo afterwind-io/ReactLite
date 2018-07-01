@@ -58,9 +58,13 @@ class App extends ReactLite<any, ITodoData> {
     });
   }
 
+  private renderTitle() {
+    return h1(null, 'TODOs');
+  }
+
   public render(h: CreateElement) {
     return div(null,
-      h1(null, 'TODOs'),
+      this.renderTitle(),
       input({
         domAttr: {
           value: this.state.todo
@@ -77,14 +81,31 @@ class App extends ReactLite<any, ITodoData> {
         },
         'add'
       ),
-      ...this.state.todos.map((todo: ITodoData, index: number) =>
-        h(Todo,
-          {
-            ...todo,
-            onRemoved: () => this.remove(index)
-          }
+      h(TodoList, null,
+        ...this.state.todos.map((todo: ITodoData, index: number) =>
+          h(Todo,
+            {
+              ...todo,
+              onRemoved: () => this.remove(index)
+            }
+          )
         )
-      )
+      ),
+    );
+  }
+}
+
+class TodoList extends ReactLite {
+  public render(h: CreateElement) {
+    return div(
+      {
+        class: ['wow'],
+        style: {
+          border: '1px solid grey',
+          padding: '8px',
+        }
+      },
+      ...this.childNodes
     );
   }
 }
