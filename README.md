@@ -8,7 +8,7 @@ react核心功能的模拟实现
 
 - [x] 基本reconcile实现
 
-- [ ] 以key为基准的数组diff
+- [x] 以key为基准的数组diff
 
 - [x] 支持函数式组件
 

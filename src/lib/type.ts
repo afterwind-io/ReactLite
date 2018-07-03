@@ -21,11 +21,17 @@ export interface INodeAttributes extends IDictionary<any> {
   domAttr?: IDictionary<any>;
 }
 
+export interface IKeyHash {
+  index: number;
+  context: IContext;
+}
+
 export interface IContext {
   instance: IReactLite | null;
   dom: HTMLElement | Text | null;
   node: INode;
   children: IContext[];
+  keyHashes: IDictionary<IKeyHash>;
 
   isEmpty: boolean;
 }

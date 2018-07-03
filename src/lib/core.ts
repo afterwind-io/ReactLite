@@ -1,6 +1,8 @@
 import {
+  IDictionary,
   INode,
   INodeAttributes,
+  IKeyHash,
   IContext,
   IReactLite,
   ReactLiteConstructor,
@@ -12,6 +14,7 @@ export class Context implements IContext {
   public dom: HTMLElement | Text | null = null;
   public node: vNode = vNode.empty();
   public children: IContext[] = [];
+  public keyHashes: IDictionary<IKeyHash> = {};
 
   public static empty(): IContext {
     return new Context();

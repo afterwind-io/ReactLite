@@ -13,22 +13,29 @@ import {
 } from './lib/dom.util';
 
 interface ITodoData {
+  id: string;
   time: string;
   content: string;
   onRemoved?: () => void;
 }
 
-class App extends ReactLite<any, ITodoData> {
+class App extends ReactLite<any, any> {
   constructor(prop: any = {}) {
     super(prop);
 
     this.state = {
       todo: '',
+      // todos: Array.from({ length: 1000 }).map(_ => ({
+      //   id: Math.floor(Math.random() * 1000000),
+      //   time: 'wow',
+      //   content: this.state.todo
+      // }))
+
       todos: [
-        { time: '09:00', content: 'Get up' },
-        { time: '12:00', content: 'Eat Luanch' },
-        { time: '15:00', content: 'Study' },
-        { time: '20:00', content: 'Sleep' },
+        { id: 'a', time: '09:00', content: 'Get up' },
+        { id: 'b', time: '12:00', content: 'Eat Luanch' },
+        { id: 'c', time: '15:00', content: 'Study' },
+        { id: 'd', time: '20:00', content: 'Sleep' },
       ]
     };
   }
@@ -43,6 +50,7 @@ class App extends ReactLite<any, ITodoData> {
     this.setState({
       todo: '',
       todos: this.state.todos.concat({
+        id: Math.floor(Math.random() * 1000000),
         time: 'wow',
         content: this.state.todo
       })
@@ -85,6 +93,7 @@ class App extends ReactLite<any, ITodoData> {
         ...this.state.todos.map((todo: ITodoData, index: number) =>
           h(Todo,
             {
+              key: todo.id,
               ...todo,
               onRemoved: () => this.remove(index)
             }
@@ -137,7 +146,13 @@ class Todo extends ReactLite<any, ITodoData> {
   }
 
   public render(h: CreateElement) {
-    return div({ style: 'display: flex;' },
+    return div(
+      {
+        domAttr: {
+          id: this.prop.id,
+        },
+        style: 'display: flex;',
+      },
       p(null, this.state.like),
       p(null, `${this.state.mark ? '[TODO]' : '[----]'}`),
       p(null, `${this.prop.time} - ${this.prop.content}`),
