@@ -1,5 +1,5 @@
-import { CreateElement } from './lib/type';
-import { ReactLite } from './lib/reactlite';
+import { CreateElement } from './lib/std/type';
+import { ReactLite } from './lib/std/reactlite';
 import {
   button,
   div,
@@ -10,7 +10,7 @@ import {
   td,
   th,
   tr,
-} from './lib/dom.util';
+} from './lib/std/dom.util';
 
 interface ITodoData {
   id: string;

@@ -4,7 +4,8 @@ module.exports = {
   mode: 'development',
   entry: {
     app: [
-      './src/index.ts'
+      // './src/index.ts'
+      './src/fiber.test.ts'
     ]
   },
   resolve: {
